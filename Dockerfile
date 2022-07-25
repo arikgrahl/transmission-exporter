@@ -1,8 +1,16 @@
-FROM alpine:latest
-RUN apk add --update ca-certificates
+FROM golang:1.18.3 AS builder
 
-ADD ./transmission-exporter /usr/bin/transmission-exporter
+COPY . /usr/src/app
 
-EXPOSE 19091
+WORKDIR /usr/src/app
 
-ENTRYPOINT ["/usr/bin/transmission-exporter"]
+RUN CGO_ENABLED=0 go build ./cmd/transmission-exporter
+
+FROM scratch
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /usr/src/app/transmission-exporter /bin/transmission-exporter
+
+USER 1000
+
+ENTRYPOINT ["/bin/transmission-exporter"]
